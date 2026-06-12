@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Memory</title>
+  
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+ <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;700&display=swap');
+
+    :root {
+      
+  --gold-primary: #110d0a;   /* اللون الجديد */
+  --gold-secondary: #060505;
+  --dark-bg: #0c0b09;
+  --glass-bg: rgb(158, 118, 96);
+  --glass-border: rgb(19, 15, 13);
+  --text-main: #080807;
+  --text-muted: #a07c5a;
+}
+
+    
+.fade-in {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 1s ease;
+}
+.fade-in.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+#guestbook {
+  margin-top: 5px; /* يقلل المسافة من فوق */
+}
+#loginForm {
+   position: absolute;
+  top: 60%;
+  margin: 50px auto;
+  margin-bottom: 90px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: auto;   /* عرض أصغر */
+  padding: auto;      /* مسافة داخلية أقل */
+}
+#loginForm .form-group {
+  display: flex;
+   margin-top: 30px;
+  flex-direction: column;
+  gap: 100px; /* المسافة بين كل عنصر */
+}
+
+#loginForm input{margin-top: 8px;}
+#loginForm button {
+  margin-top: 8px; /* مسافة إضافية بسيطة */
+}
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Tajawal', sans-serif;
+    }
+
+    body {
+           /* يخلي الطول طول الشاشة */
+           height: 100%;
+           display: flex;
+           flex-direction: column;
+           justify-content: center;   /* يوسّط عمودي */
+           align-items: center;       /* يوسّط أفقي */
+           min-height: 100vh;         /* يخلي الطول طول الشاشة */
+           margin: 0;                 /* يمنع أي scroll جانبي */
+           overflow-x: hidden; 
+           padding-bottom: 90px;      /* مسافة من تحت */
+           padding-top: 90px;         /* مسافة من فوق */
+           background-color: var(--dark-bg);
+           color: var(--text-main);
+           overflow-x: hidden;
+           scroll-behavior: smooth;
+    }
+
+    /* Cinematic Video Background */
+    .video-bg {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100vh;
+      object-fit: cover;
+      z-index: -3;
+      opacity: 0.25;
+    }
+    .vignette {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100vh;
+      background: radial-gradient(circle at center, transparent 10%, var(--dark-bg) 100%);
+      z-index: -2;
+    }
+    .image-container {
+  margin-left: auto;
+
+  margin-right: auto; /* يخليها في النص */
+   margin-bottom: 10px;
+}
+    /* Golden Particles Canvas */
+    #particlesCanvas {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100vh;
+      z-index: -1;
+      pointer-events: none;
+    }
+.toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: rgb(189, 139, 112);
+  color: #030202;
+  padding: 15px 25px;
+  border-radius: 15px;
+  border: 1px solid var(--gold-primary);
+  box-shadow: 0 0 20px rgb(213, 156, 125);
+  font-size: 1.1rem;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.5s ease;
+  z-index: 9999;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+    
+    
+    /* Sections */
+    section {
+      min-height: auto;     
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 10px 10px;
+      position: relative;
+      gap: 5px;
+      padding-top: 0px;
+    }
+
+    /* Typography */
+    .gold-text {
+  color: #171715;   /* لون واحد ثابت */
+  background: none; /* إلغاء التدرج */
+  -webkit-background-clip: initial;
+  -webkit-text-fill-color: initial;
+}
+
+    h1 { font-size: clamp(2.5rem, 5vw, 4.5rem); margin-bottom: 20px; text-align: center; }
+    h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); margin-bottom: 10px; text-align: center; }
+    
+    .poem {
+      font-size: clamp(1.2rem, 2vw, 1.5rem);
+      line-height: 2;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 20px;
+      font-weight: 300;
+      max-width: 800px;
+      position: relative;
+    }
+    .poem::before, .poem::after {
+      content: '✨';
+      color: var(--gold-primary);
+      margin:5px;
+    }
+
+    /* Glassmorphism Card */
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 30px;
+      padding: 20px;
+      box-shadow: 0 30px 60px rgb(13, 12, 11), inset 0 0 20px rgb(22, 21, 21);
+      z-index: 10;
+      width: 90%;
+      margin: 20px auto;
+      max-width: 600px;
+    }
+
+
+    /* Start Button */
+    .start-btn {
+      padding: 18px 50px;
+      font-size: 1.3rem;
+      font-family: 'Tajawal', sans-serif;
+      font-weight: 700;
+      color: #100c07d4;
+      background: rgb(213, 155, 123);
+      border: 1px solid var(--gold-primary);
+      border-radius: 50px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: 0.4s;
+      box-shadow: 0 0 20px rgb(180, 132, 106);
+    }
+    .start-btn:hover { background: rgb(178, 130, 104); box-shadow: 0 0 40px rgb(185, 135, 109); transform: translateY(-5px); }
+
+    /* Baby Image */
+    .image-container {
+      width: clamp(400px, 60vw, 400px);
+      aspect-ratio: 1/1;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid var(--glass-border);
+      box-shadow: 0 0 50px rgb(173, 128, 104);
+      margin-bottom: 10px;
+      margin-top: 40px; /* لو موجود */
+      position: relative;
+    }
+    .image-container img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform 0.8s ease;
+    }
+    .image-container:hover img { transform: scale(1.1); }
+
+    /* Live Counter */
+    .counter-container {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .counter-box {
+      background: rgb(180, 133, 107);
+      border: 1px solid rgb(18, 17, 16);
+      border-radius: 15px;
+      padding: 15px 25px;
+      text-align: center;
+      min-width: 120px;
+    }
+    .counter-num { font-size: 2.5rem; color: var(--gold-primary); font-weight: bold; }
+    .counter-label { font-size: 1rem; color: var(--text-muted); }
+
+    /* Firebase Form */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      width: 100%;
+    }
+    input {
+      width: 100%; padding: 18px 25px;
+      background: rgb(196, 148, 122);
+      border: 1px solid var(--glass-border);
+      border-radius: 15px;
+      color: #0e0d0c; font-size: 1.1rem;
+      transition: all 0.3s;
+      font-family: 'Tajawal', sans-serif;
+    }
+    input:focus { outline: none; border-color: var(--gold-primary); box-shadow: 0 0 15px rgb(211, 168, 142); }
+    
+    /* Suggestions */
+    .suggestions {
+      display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; justify-content: center;
+    }
+    .suggestion-pill {
+      background: rgb(205, 150, 121);
+      border: 1px solid rgb(203, 151, 123);
+      color: var(--text-muted);
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .suggestion-pill:hover { background: var(--gold-primary); color: #cea280; }
+
+    /* Messages Grid */
+    .messages-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 5px;
+      width: 100%;
+      margin-top: 10px;
+      max-height: 500px;
+      overflow-y: auto;
+      padding-left: 10px;
+    }
+    .messages-grid::-webkit-scrollbar { width: 6px; }
+    .messages-grid::-webkit-scrollbar-thumb { background: var(--gold-primary); border-radius: 10px; }
+    
+    .msg-card {
+      background: rgb(234, 170, 136);
+      border-right: 3px solid var(--gold-primary);
+      padding: 15px;
+      border-radius: 15px;
+      backdrop-filter: blur(5px);
+      transition: transform 0.3s;
+    }
+    .msg-card:hover { transform: translateY(-5px); background: rgb(221, 177, 126); }
+
+    #messagesSection {
+  min-height: auto;   /* بدل 100vh */
+  margin-top: 5px;   /* مسافة بسيطة بين التسجيل والرسائل */
+  min-height: auto;
+  margin: 10px auto;   /* مسافة بسيطة فوق وتحت */
+  width: 100%;
+  max-width: 900px;    /* نفس عرض الكونتينر الأول */
+  margin-top: 10px; /* بدل 40px أو 60px */
+}
+
+.section {
+  padding-top: 5px;   /* بدل 60px اللي كانت موجودة */
+  padding-bottom: 5px;
+}
+
+    /* Animations */
+    .reveal { opacity: 0; transform: translateY(40px); transition: all 1.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .reveal.active { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+  
+<div id="loginForm" class="glass-card fade-in">
+<div><H1><p>يدوم الأثر حتى لو فرقتنا الطرق</p><br>
+
+<P>"شُكراً لكل من كان جزءاً من الرحلة"</P><br></H1></div>
+  <h2 class="gold-text">🔑 تسجيل الدخول</h2>
+  <input type="email" id="loginEmail" placeholder="أدخل بريدك الإلكتروني( مش لازم )">
+  <input type="password" id="loginPassword" placeholder="دخل كلمة المرور( مش مهم )">
+  <button class="start-btn" onclick="loginUser()">تسجيل الدخول</button>
+</div>
+<canvas id="particlesCanvas"></canvas>
+
+  
+<div class="image-container reveal">
+      <img src="image.jpeg" alt="Leave a memory">
+    </div>
+  <!-- كونتينر التهاني -->
+<section id="guestbook" style="display: none;">
+  <div class="glass-card reveal">
+    <h2 class="gold-text">Leave a memory</h2>
+    <div class="form-group">
+      <input type="text" id="userNameInput" placeholder="your name">
+      <input type="text" id="msgInput" placeholder="....Your message">
+      <button class="start-btn" onclick="addMessage()">Send</button>
+    </div>
+    <!-- هنا غيرنا الـ ID -->
+    <div class="messages-grid" id="guestbookList"></div>
+  </div>
+</section>
+
+<!-- كونتينر منفصل للرسائل -->
+<section id="messagesSection" style="display: none;">
+  <div class="glass-card reveal">
+    <h2 class="gold-text">Memories📜</h2>
+    <!-- هنا هي الليستة الأساسية -->
+    <div class="messages-grid" id="messagesList"></div>
+  </div>
+</section>
+
+    <div id="toast" class="toast">تم إرسال التهنئة بنجاح 🎉</div>
+  <script>
+  // --- 1. Initial Animations & Interactions ---
+  window.addEventListener('load', () => {
+  document.getElementById('loginForm').classList.add('active');
+  initParticles();
+});
+  // --- 2. Golden Particles Background ---
+  function initParticles() {
+  const canvas = document.getElementById("particlesCanvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const particles = Array.from({length: 80}, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    size: Math.random() * 5 + 1,
+    speedY: Math.random() * 0.5 + 0.3,
+    opacity: Math.random()
+  }));
+
+  function drawParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(158, 118, 96,${p.opacity})`; // اللون الدهبي
+      ctx.fill();
+
+      // حركة الزرة
+      p.y += p.speedY;
+      if (p.y > canvas.height) {
+        p.y = 0;
+        p.x = Math.random() * canvas.width;
+      }
+    });
+    requestAnimationFrame(drawParticles);
+  }
+
+  drawParticles();
+}
+
+  // --- 3. Scroll Reveal ---
+  function triggerReveals() { const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('active'); });
+      }, { threshold: 0.15 });
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el)); }
+
+ 
+
+  // --- 5. Firebase Config ---
+   // --- Firebase Config ---
+ const firebaseConfig = {
+  apiKey: "AIzaSyAU4RGh1XWFGU99FMryPLAA0ZvmXYFRpag",
+  authDomain: "rawda-b14ee.firebaseapp.com",
+  databaseURL: "https://rawda-b14ee-default-rtdb.firebaseio.com",
+  projectId: "rawda-b14ee",
+  storageBucket: "rawda-b14ee.firebasestorage.app",
+  messagingSenderId: "143983652168",
+  appId: "1:143983652168:web:f1c0d919d2c1b28e9a177d",
+  measurementId: "G-280X4HDRKF"
+};
+
+
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // --- Add Message ---
+ function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2000); // يختفي بعد 3 ثواني
+}
+
+function addMessage() {
+  const msg = document.getElementById('msgInput').value;
+  const userName = document.getElementById('userNameInput').value;
+  if(msg.trim() !== "" && userName.trim() !== "") {
+    msgInput.value = "";
+    userNameInput.value = "";
+    db.ref("guestbook").push({
+  name: userName,
+  text: msg,
+  timestamp: new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+})
+.then(() => {
+  showToast("🎊 تم إرسال الرساله بنجاح!");
+  
+}).catch(err => {
+  showToast("❌ فشل إرسال الرسالة: " + err.message);
+});
+
+  }}
+function startCounter() {}
+
+
+  // --- Login & Load Messages ---
+  function loginUser() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+
+   firebase.auth().signInWithEmailAndPassword(email, password)
+  .then(user => {
+    console.log("تم تسجيل الدخول:", user.user.uid);
+    document.getElementById('loginForm').style.display = 'none'; 
+    document.getElementById('guestbook').style.display = 'flex';
+document.getElementById('messagesSection').style.display = 'block'; // إظهار كونتينر الرسائل
+  
+    setTimeout(() => { triggerReveals(); startCounter(); }, 100);
+    window.scrollTo(0, 0);
+
+    loadMessages(); // هيشتغل بس لو الـ UID مطابق للـ Rules
+  })
+  .catch(err => {
+    console.warn("محاولة دخول فاشلة:", err.message);
+    document.getElementById('loginForm').style.display = 'none'; 
+    document.getElementById('guestbook').style.display = 'flex';
+    
+    setTimeout(() => { triggerReveals(); startCounter(); }, 100);
+    window.scrollTo(0, 0);
+  });
+
+  }
+
+    function loadMessages() {
+  db.ref("guestbook").on("child_added", snapshot => {
+    const data = snapshot.val();
+    let nameStr = data.name || "ضيف";
+    let textStr = data.text || "";
+    let timeStr = data.timestamp || "";
+
+    const card = document.createElement('div');
+    card.className = "msg-card";
+    card.innerHTML = `
+      <h3 class="gold-text" style="margin-bottom: 10px;">${nameStr}</h3>
+      <p style="font-size: 1.1rem; line-height: 1.6; white-space: pre-line;">${textStr}</p>
+      <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 15px;">⏳ ${timeStr}</span>
+    `;
+    document.getElementById('messagesList').prepend(card);
+  });
+}
+</script>
+</body>
+</html>  
